@@ -1,4 +1,5 @@
 *.log
+*.zip
 replays/*.hlt
 replays/*.log
 
