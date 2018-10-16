@@ -1,0 +1,6 @@
+*.log
+replays/*.hlt
+replays/*.log
+
+MyBot
+MyBotOld
