@@ -85,8 +85,9 @@ func main() {
 			} else if gameMap.AtEntity(ship.E).Halite < (maxHalite / 10) {
 				potentialDirection := hlt.AllDirections[rand.Intn(4)]
 				newPos, _ := ship.E.Pos.DirectionalOffset(potentialDirection)
-				if !gameMap.AtPosition(newPos).IsOccupied() {
-					gameMap.AtPosition(newPos).MarkUnsafe(ship)
+				normalizedPos := gameMap.Normalize(newPos)
+				if !gameMap.AtPosition(normalizedPos).IsOccupied() {
+					gameMap.AtPosition(normalizedPos).MarkUnsafe(ship)
 					commands = append(commands, ship.Move(potentialDirection))
 				}
 			} else {
