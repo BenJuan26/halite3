@@ -1,3 +1,3 @@
-go build main
+go build -o MyBot.exe
 
-halite.exe --replay-directory replays/ -vvv --width 32 --height 32 "go run main" "go run main"
+halite.exe --replay-directory replays/ -vvv --width 32 --height 32 "MyBot.exe" "MyBot.exe"

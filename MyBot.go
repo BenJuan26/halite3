@@ -61,7 +61,7 @@ func main() {
 		var gameMap = game.Map
 		var ships = me.Ships
 		var commands = []hlt.Command{}
-		newPositions := make(map[hlt.Position]bool)
+		bank := 1000 * int(game.TurnNumber/40)
 
 		for i := range ships {
 			var ship = ships[i]
@@ -77,29 +77,17 @@ func main() {
 					logger.Printf("Ship %d: Returned to base; switching to explore role", ship.GetID())
 				} else {
 					dir := gameMap.NaiveNavigate(ship, me.Shipyard.E.Pos)
-					newPos, _ := ship.E.Pos.DirectionalOffset(dir)
-					if !gameMap.AtPosition(newPos).IsOccupied() {
-						if _, positionTaken := newPositions[*newPos]; !positionTaken {
-							commands = append(commands, ship.Move(dir))
-							newPositions[*newPos] = true
-						} else {
-							commands = append(commands, ship.StayStill())
-							logger.Printf("Ship %d: Position (%d, %d) was in the new positions list, staying still", ship.GetID(), newPos.GetX(), newPos.GetY())
-						}
-					} else {
-						commands = append(commands, ship.StayStill())
-						logger.Printf("Ship %d: Position (%d, %d) was occupied, staying still", ship.GetID(), newPos.GetX(), newPos.GetY())
-					}
+					commands = append(commands, ship.Move(dir))
 				}
 			} else if ship.Halite > (maxHalite / 2) {
 				shipRoles[shipID] = returning
 				logger.Printf("Ship %d: Halite is now at %d; returning to base", ship.GetID(), ship.Halite)
 			} else if gameMap.AtEntity(ship.E).Halite < (maxHalite / 10) {
 				potentialDirection := hlt.AllDirections[rand.Intn(4)]
-				potentialPos, _ := ship.E.Pos.DirectionalOffset(potentialDirection)
-				if _, positionTaken := newPositions[*potentialPos]; !positionTaken && !gameMap.AtPosition(potentialPos).IsOccupied() {
+				newPos, _ := ship.E.Pos.DirectionalOffset(potentialDirection)
+				if !gameMap.AtPosition(newPos).IsOccupied() {
+					gameMap.AtPosition(newPos).MarkUnsafe(ship)
 					commands = append(commands, ship.Move(potentialDirection))
-					newPositions[*potentialPos] = true
 				}
 			} else {
 				commands = append(commands, ship.Move(hlt.Still()))
@@ -107,7 +95,7 @@ func main() {
 			}
 		}
 
-		if game.TurnNumber <= 200 && me.Halite >= shipCost && !gameMap.AtEntity(me.Shipyard.E).IsOccupied() {
+		if me.Halite >= shipCost+bank && !gameMap.AtEntity(me.Shipyard.E).IsOccupied() {
 			commands = append(commands, hlt.SpawnShip{})
 		}
 		game.EndTurn(commands)
