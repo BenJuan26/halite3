@@ -62,6 +62,7 @@ func main() {
 		var me = game.Me
 		var gameMap = game.Map
 		var ships = me.Ships
+		totalShips := len(ships)
 		var commands = []hlt.Command{}
 		// bank := 1000 * int(game.TurnNumber/20)
 
@@ -96,8 +97,9 @@ func main() {
 					commands = append(commands, ship.Move(dir))
 					logger.Printf("Ship %d: Returned to base; switching to explore role", ship.GetID())
 					logger.Printf("New target is %d,%d; moving %s to get there", cell.Pos.GetX(), cell.Pos.GetY(), string(dir.GetCharValue()))
-				} else {
+				} else if ship.Halite >= cellHalite/10 {
 					dir := gameMap.NaiveNavigate(ship, me.Shipyard.E.Pos)
+
 					// just try a random position instead of standing still
 					if dir.Equals(hlt.Still()) {
 						perm := rand.Perm(5)
@@ -115,6 +117,8 @@ func main() {
 					}
 					commands = append(commands, ship.Move(dir))
 					logger.Printf("Moving %s to get to the shipyard", string(dir.GetCharValue()))
+				} else {
+					commands = append(commands, ship.StayStill())
 				}
 			} else if ship.Halite > (maxHalite / 2) {
 				shipRoles[shipID] = returning
@@ -125,7 +129,7 @@ func main() {
 				dir := gameMap.NaiveNavigate(ship, me.Shipyard.E.Pos)
 				commands = append(commands, ship.Move(dir))
 				logger.Printf("Moving %s", string(dir.GetCharValue()))
-			} else if cellHalite < (maxHalite/10) && ship.Halite >= cellHalite/10 {
+			} else if cellHalite < (maxHalite/20) && ship.Halite >= cellHalite/10 {
 				if _, ok := shipTargets[shipID]; !ok {
 					cells := cellsByHalite(game)
 					cell := cells[rand.Intn(4)]
@@ -155,7 +159,7 @@ func main() {
 			}
 		}
 
-		if game.TurnNumber <= maxTurns/2 && me.Halite >= shipCost && !gameMap.AtEntity(me.Shipyard.E).IsOccupied() {
+		if game.TurnNumber <= maxTurns/2 && totalShips < gameMap.GetWidth()/2 && me.Halite >= shipCost && !gameMap.AtEntity(me.Shipyard.E).IsOccupied() {
 			commands = append(commands, hlt.SpawnShip{})
 		}
 		game.EndTurn(commands)
