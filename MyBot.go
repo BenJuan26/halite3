@@ -63,30 +63,39 @@ func main() {
 		var gameMap = game.Map
 		var ships = me.Ships
 		var commands = []hlt.Command{}
-		bank := 1000 * int(game.TurnNumber/20)
+		// bank := 1000 * int(game.TurnNumber/20)
 
 		for i := range ships {
 			var ship = ships[i]
 			shipID := ship.GetID()
 			cellHalite := gameMap.AtEntity(ship.E).Halite
-			if target, ok := shipTargets[shipID]; ok {
-				logger.Printf("Ship %d: My target is %d,%d", shipID, target.GetX(), target.GetY())
-			} else {
-				logger.Printf("Ship %d: I still don't have a target", shipID)
-			}
 
 			if _, ok := shipRoles[shipID]; !ok {
 				shipRoles[shipID] = exploring
 			}
 
+			if target, ok := shipTargets[shipID]; ok {
+				if gameMap.AtPosition(target).Halite <= maxHalite/10 {
+					cells := cellsByHalite(game)
+					cell := cells[rand.Intn(4)]
+					shipTargets[shipID] = cell.Pos
+					target = cell.Pos
+				}
+				logger.Printf("Ship %d: My target is %d,%d", shipID, target.GetX(), target.GetY())
+			} else if shipRoles[shipID] == exploring {
+				logger.Printf("Ship %d: I still don't have a target", shipID)
+			}
+
 			if shipRoles[shipID] == returning {
 				if ship.E.Pos.Equals(me.Shipyard.E.Pos) {
 					shipRoles[shipID] = exploring
-					cells := gameMap.CellsByHalite(me.Shipyard.E.Pos, -1)
+					cells := cellsByHalite(game)
 					cell := cells[rand.Intn(4)]
 					shipTargets[shipID] = cell.Pos
-					commands = append(commands, ship.Move(gameMap.NaiveNavigate(ship, cell.Pos)))
+					dir := gameMap.NaiveNavigate(ship, cell.Pos)
+					commands = append(commands, ship.Move(dir))
 					logger.Printf("Ship %d: Returned to base; switching to explore role", ship.GetID())
+					logger.Printf("New target is %d,%d; moving %s to get there", cell.Pos.GetX(), cell.Pos.GetY(), string(dir.GetCharValue()))
 				} else {
 					dir := gameMap.NaiveNavigate(ship, me.Shipyard.E.Pos)
 					// just try a random position instead of standing still
@@ -105,6 +114,7 @@ func main() {
 						}
 					}
 					commands = append(commands, ship.Move(dir))
+					logger.Printf("Moving %s to get to the shipyard", string(dir.GetCharValue()))
 				}
 			} else if ship.Halite > (maxHalite / 2) {
 				shipRoles[shipID] = returning
@@ -112,10 +122,12 @@ func main() {
 					delete(shipTargets, shipID)
 				}
 				logger.Printf("Ship %d: Halite is now at %d; returning to base", ship.GetID(), ship.Halite)
-				commands = append(commands, ship.Move(gameMap.NaiveNavigate(ship, me.Shipyard.E.Pos)))
+				dir := gameMap.NaiveNavigate(ship, me.Shipyard.E.Pos)
+				commands = append(commands, ship.Move(dir))
+				logger.Printf("Moving %s", string(dir.GetCharValue()))
 			} else if cellHalite < (maxHalite/10) && ship.Halite >= cellHalite/10 {
 				if _, ok := shipTargets[shipID]; !ok {
-					cells := gameMap.CellsByHalite(me.Shipyard.E.Pos, -1)
+					cells := cellsByHalite(game)
 					cell := cells[rand.Intn(4)]
 					shipTargets[shipID] = cell.Pos
 				}
@@ -136,13 +148,14 @@ func main() {
 					}
 				}
 				commands = append(commands, ship.Move(dir))
+				logger.Printf("Ship %d: Moving %s", shipID, string(dir.GetCharValue()))
 			} else {
 				commands = append(commands, ship.Move(hlt.Still()))
 				logger.Printf("Ship %d: Got to end of if block, staying still", ship.GetID())
 			}
 		}
 
-		if game.TurnNumber <= maxTurns/2 && me.Halite >= shipCost+bank && !gameMap.AtEntity(me.Shipyard.E).IsOccupied() {
+		if game.TurnNumber <= maxTurns/2 && me.Halite >= shipCost && !gameMap.AtEntity(me.Shipyard.E).IsOccupied() {
 			commands = append(commands, hlt.SpawnShip{})
 		}
 		game.EndTurn(commands)
@@ -154,13 +167,13 @@ func cellsByHalite(game *hlt.Game) []*hlt.MapCell {
 	me := game.Me
 	maxHalite, _ := gameconfig.GetInstance().GetInt(gameconfig.MaxHalite)
 	maxCellHalite := 0
-	radius := 8
 	var cells []*hlt.MapCell
-
+	radius := 6
 	// We want at least 2 cells to have more than half halite
-	for radius <= gm.GetWidth() && maxCellHalite < maxHalite/2 {
-		cells := gm.CellsByHalite(me.Shipyard.E.Pos, 8)
+	for ; radius <= gm.GetWidth() && maxCellHalite < maxHalite/5; radius = radius + 2 {
+		cells = gm.CellsByHalite(me.Shipyard.E.Pos, radius)
 		maxCellHalite = cells[3].Halite
 	}
+	log.GetInstance().Printf("Using radius %d", radius)
 	return cells
 }
