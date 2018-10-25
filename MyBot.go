@@ -53,19 +53,27 @@ func main() {
 	gracefulExit(fileLogger)
 	var maxHalite, _ = config.GetInt(gameconfig.MaxHalite)
 	var shipCost, _ = config.GetInt(gameconfig.ShipCost)
+	maxTurns, _ := config.GetInt(gameconfig.MaxTurns)
 	game.Ready("MyBot")
 	shipRoles := make(map[int]int)
+	shipTargets := make(map[int]*hlt.Position)
 	for {
 		game.UpdateFrame()
 		var me = game.Me
 		var gameMap = game.Map
 		var ships = me.Ships
 		var commands = []hlt.Command{}
-		bank := 1000 * int(game.TurnNumber/40)
+		bank := 1000 * int(game.TurnNumber/20)
 
 		for i := range ships {
 			var ship = ships[i]
 			shipID := ship.GetID()
+			cellHalite := gameMap.AtEntity(ship.E).Halite
+			if target, ok := shipTargets[shipID]; ok {
+				logger.Printf("Ship %d: My target is %d,%d", shipID, target.GetX(), target.GetY())
+			} else {
+				logger.Printf("Ship %d: I still don't have a target", shipID)
+			}
 
 			if _, ok := shipRoles[shipID]; !ok {
 				shipRoles[shipID] = exploring
@@ -74,31 +82,85 @@ func main() {
 			if shipRoles[shipID] == returning {
 				if ship.E.Pos.Equals(me.Shipyard.E.Pos) {
 					shipRoles[shipID] = exploring
+					cells := gameMap.CellsByHalite(me.Shipyard.E.Pos, -1)
+					cell := cells[rand.Intn(4)]
+					shipTargets[shipID] = cell.Pos
+					commands = append(commands, ship.Move(gameMap.NaiveNavigate(ship, cell.Pos)))
 					logger.Printf("Ship %d: Returned to base; switching to explore role", ship.GetID())
 				} else {
 					dir := gameMap.NaiveNavigate(ship, me.Shipyard.E.Pos)
+					// just try a random position instead of standing still
+					if dir.Equals(hlt.Still()) {
+						perm := rand.Perm(5)
+						for _, i := range perm {
+							newDir := hlt.AllDirections[i]
+							newPos, _ := ship.E.Pos.DirectionalOffset(newDir)
+							normalized := gameMap.Normalize(newPos)
+							if !newDir.Equals(hlt.Still()) && !gameMap.AtPosition(normalized).IsOccupied() {
+								dir = newDir
+								gameMap.AtPosition(normalized).MarkUnsafe(ship)
+								logger.Printf("Ship %d: Navigation wanted me to stay, but I'm going %s instead", shipID, string(dir.GetCharValue()))
+								break
+							}
+						}
+					}
 					commands = append(commands, ship.Move(dir))
 				}
 			} else if ship.Halite > (maxHalite / 2) {
 				shipRoles[shipID] = returning
-				logger.Printf("Ship %d: Halite is now at %d; returning to base", ship.GetID(), ship.Halite)
-			} else if gameMap.AtEntity(ship.E).Halite < (maxHalite / 10) {
-				potentialDirection := hlt.AllDirections[rand.Intn(4)]
-				newPos, _ := ship.E.Pos.DirectionalOffset(potentialDirection)
-				normalizedPos := gameMap.Normalize(newPos)
-				if !gameMap.AtPosition(normalizedPos).IsOccupied() {
-					gameMap.AtPosition(normalizedPos).MarkUnsafe(ship)
-					commands = append(commands, ship.Move(potentialDirection))
+				if _, hasTarget := shipTargets[shipID]; hasTarget {
+					delete(shipTargets, shipID)
 				}
+				logger.Printf("Ship %d: Halite is now at %d; returning to base", ship.GetID(), ship.Halite)
+				commands = append(commands, ship.Move(gameMap.NaiveNavigate(ship, me.Shipyard.E.Pos)))
+			} else if cellHalite < (maxHalite/10) && ship.Halite >= cellHalite/10 {
+				if _, ok := shipTargets[shipID]; !ok {
+					cells := gameMap.CellsByHalite(me.Shipyard.E.Pos, -1)
+					cell := cells[rand.Intn(4)]
+					shipTargets[shipID] = cell.Pos
+				}
+				dir := gameMap.NaiveNavigate(ship, shipTargets[shipID])
+				// just try a random position instead of standing still
+				if dir.Equals(hlt.Still()) {
+					perm := rand.Perm(5)
+					for _, i := range perm {
+						newDir := hlt.AllDirections[i]
+						newPos, _ := ship.E.Pos.DirectionalOffset(newDir)
+						normalized := gameMap.Normalize(newPos)
+						if !newDir.Equals(hlt.Still()) && !gameMap.AtPosition(normalized).IsOccupied() {
+							dir = newDir
+							gameMap.AtPosition(normalized).MarkUnsafe(ship)
+							logger.Printf("Ship %d: Navigation wanted me to stay, but I'm going %s instead", shipID, string(dir.GetCharValue()))
+							break
+						}
+					}
+				}
+				commands = append(commands, ship.Move(dir))
 			} else {
 				commands = append(commands, ship.Move(hlt.Still()))
 				logger.Printf("Ship %d: Got to end of if block, staying still", ship.GetID())
 			}
 		}
 
-		if me.Halite >= shipCost+bank && !gameMap.AtEntity(me.Shipyard.E).IsOccupied() {
+		if game.TurnNumber <= maxTurns/2 && me.Halite >= shipCost+bank && !gameMap.AtEntity(me.Shipyard.E).IsOccupied() {
 			commands = append(commands, hlt.SpawnShip{})
 		}
 		game.EndTurn(commands)
 	}
+}
+
+func cellsByHalite(game *hlt.Game) []*hlt.MapCell {
+	gm := game.Map
+	me := game.Me
+	maxHalite, _ := gameconfig.GetInstance().GetInt(gameconfig.MaxHalite)
+	maxCellHalite := 0
+	radius := 8
+	var cells []*hlt.MapCell
+
+	// We want at least 2 cells to have more than half halite
+	for radius <= gm.GetWidth() && maxCellHalite < maxHalite/2 {
+		cells := gm.CellsByHalite(me.Shipyard.E.Pos, 8)
+		maxCellHalite = cells[3].Halite
+	}
+	return cells
 }
