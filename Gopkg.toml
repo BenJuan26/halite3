@@ -1,0 +1,7 @@
+[[constraint]]
+  revision = "f209976d15c7d70ae1083036b92517631612e537"
+  name = "github.com/BenJuan26/hlt"
+
+[prune]
+  go-tests = true
+  unused-packages = true
