@@ -188,9 +188,9 @@ func cellsByHalite(game *hlt.Game) []*hlt.MapCell {
 	var cells []*hlt.MapCell
 	radius := 6
 	// We want at least 2 cells to have more than half halite
-	for ; radius <= gm.GetWidth() && maxCellHalite < maxHalite/5; radius = radius + 2 {
+	for ; radius <= gm.GetWidth() && maxCellHalite < maxHalite/2; radius = radius + 2 {
 		cells = gm.CellsByHalite(me.Shipyard.E.Pos, radius)
-		maxCellHalite = cells[3].Halite
+		maxCellHalite = cells[1].Halite
 	}
 	log.GetInstance().Printf("Using radius %d", radius)
 	return cells
