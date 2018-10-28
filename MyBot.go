@@ -94,11 +94,16 @@ func main() {
 					cell := cells[rand.Intn(4)]
 					shipTargets[shipID] = cell.Pos
 					dir := gameMap.NaiveNavigate(ship, cell.Pos)
+					pos, _ := ship.E.Pos.DirectionalOffset(dir)
+					norm := gameMap.Normalize(pos)
+					gameMap.AtPosition(norm).MarkUnsafe(ship)
 					commands = append(commands, ship.Move(dir))
 					logger.Printf("Ship %d: Returned to base; switching to explore role", ship.GetID())
 					logger.Printf("New target is %d,%d; moving %s to get there", cell.Pos.GetX(), cell.Pos.GetY(), string(dir.GetCharValue()))
 				} else if ship.Halite >= cellHalite/10 {
 					dir := gameMap.NaiveNavigate(ship, me.Shipyard.E.Pos)
+					pos, _ := ship.E.Pos.DirectionalOffset(dir)
+					norm := gameMap.Normalize(pos)
 
 					// just try a random position instead of standing still
 					if dir.Equals(hlt.Still()) {
@@ -106,15 +111,17 @@ func main() {
 						for _, i := range perm {
 							newDir := hlt.AllDirections[i]
 							newPos, _ := ship.E.Pos.DirectionalOffset(newDir)
-							normalized := gameMap.Normalize(newPos)
-							if !newDir.Equals(hlt.Still()) && !gameMap.AtPosition(normalized).IsOccupied() {
+							newNorm := gameMap.Normalize(newPos)
+							if !newDir.Equals(hlt.Still()) && !gameMap.AtPosition(newNorm).IsOccupied() {
 								dir = newDir
-								gameMap.AtPosition(normalized).MarkUnsafe(ship)
+								pos = newPos
+								norm = newNorm
 								logger.Printf("Ship %d: Navigation wanted me to stay, but I'm going %s instead", shipID, string(dir.GetCharValue()))
 								break
 							}
 						}
 					}
+					gameMap.AtPosition(norm).MarkUnsafe(ship)
 					commands = append(commands, ship.Move(dir))
 					logger.Printf("Moving %s to get to the shipyard", string(dir.GetCharValue()))
 				} else {
@@ -127,6 +134,9 @@ func main() {
 				}
 				logger.Printf("Ship %d: Halite is now at %d; returning to base", ship.GetID(), ship.Halite)
 				dir := gameMap.NaiveNavigate(ship, me.Shipyard.E.Pos)
+				pos, _ := ship.E.Pos.DirectionalOffset(dir)
+				norm := gameMap.Normalize(pos)
+				gameMap.AtPosition(norm).MarkUnsafe(ship)
 				commands = append(commands, ship.Move(dir))
 				logger.Printf("Moving %s", string(dir.GetCharValue()))
 			} else if cellHalite < (maxHalite/20) && ship.Halite >= cellHalite/10 {
@@ -136,21 +146,25 @@ func main() {
 					shipTargets[shipID] = cell.Pos
 				}
 				dir := gameMap.NaiveNavigate(ship, shipTargets[shipID])
+				pos, _ := ship.E.Pos.DirectionalOffset(dir)
+				norm := gameMap.Normalize(pos)
 				// just try a random position instead of standing still
 				if dir.Equals(hlt.Still()) {
 					perm := rand.Perm(5)
 					for _, i := range perm {
 						newDir := hlt.AllDirections[i]
 						newPos, _ := ship.E.Pos.DirectionalOffset(newDir)
-						normalized := gameMap.Normalize(newPos)
-						if !newDir.Equals(hlt.Still()) && !gameMap.AtPosition(normalized).IsOccupied() {
+						newNorm := gameMap.Normalize(newPos)
+						if !newDir.Equals(hlt.Still()) && !gameMap.AtPosition(newNorm).IsOccupied() {
 							dir = newDir
-							gameMap.AtPosition(normalized).MarkUnsafe(ship)
+							pos = newPos
+							norm = newNorm
 							logger.Printf("Ship %d: Navigation wanted me to stay, but I'm going %s instead", shipID, string(dir.GetCharValue()))
 							break
 						}
 					}
 				}
+				gameMap.AtPosition(norm).MarkUnsafe(ship)
 				commands = append(commands, ship.Move(dir))
 				logger.Printf("Ship %d: Moving %s", shipID, string(dir.GetCharValue()))
 			} else {
