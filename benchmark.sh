@@ -32,7 +32,7 @@ while [ $count -lt 20 ]; do
     ((count++))
 done
 
-percent=$(echo "scale=1; ($victories/$count)*100" | bc)
+percent=$(echo "scale=2; ($victories/$count)*100" | bc)
 avg_halite=$(echo "$halite/$count" | bc)
 
 echo "-----------------------------"

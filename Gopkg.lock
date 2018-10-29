@@ -2,7 +2,7 @@
 
 
 [[projects]]
-  digest = "1:d22fcea7f1536d3c6d0fc4289c54cf35896836a870c81118c4a4e9f7669e9424"
+  digest = "1:7efc848ba73a0dc3d1c72b3ee3a71931b7930bab526fc98d129781ebc9514a9c"
   name = "github.com/BenJuan26/hlt"
   packages = [
     ".",
@@ -11,7 +11,7 @@
     "log",
   ]
   pruneopts = "UT"
-  revision = "27f378b97f95dc185f68d5d5e6e9c668644a9f7d"
+  revision = "074def91cbf6238e8ecb925dc9734fb6ea9e0fd4"
 
 [solve-meta]
   analyzer-name = "dep"

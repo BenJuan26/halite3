@@ -1,5 +1,5 @@
 [[constraint]]
-  revision = "27f378b97f95dc185f68d5d5e6e9c668644a9f7d"
+  revision = "074def91cbf6238e8ecb925dc9734fb6ea9e0fd4"
   name = "github.com/BenJuan26/hlt"
 
 [prune]

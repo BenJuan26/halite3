@@ -78,7 +78,7 @@ func main() {
 			if target, ok := shipTargets[shipID]; ok {
 				if gameMap.AtPosition(target).Halite <= maxHalite/10 {
 					cells := cellsByHalite(game)
-					cell := cells[rand.Intn(4)]
+					cell := cells[rand.Intn(8)]
 					shipTargets[shipID] = cell.Pos
 					target = cell.Pos
 				}
@@ -91,7 +91,7 @@ func main() {
 				if ship.E.Pos.Equals(me.Shipyard.E.Pos) {
 					shipRoles[shipID] = exploring
 					cells := cellsByHalite(game)
-					cell := cells[rand.Intn(4)]
+					cell := cells[rand.Intn(8)]
 					shipTargets[shipID] = cell.Pos
 					dir := gameMap.NaiveNavigate(ship, cell.Pos)
 					pos, _ := ship.E.Pos.DirectionalOffset(dir)
@@ -142,7 +142,7 @@ func main() {
 			} else if cellHalite < (maxHalite/20) && ship.Halite >= cellHalite/10 {
 				if _, ok := shipTargets[shipID]; !ok {
 					cells := cellsByHalite(game)
-					cell := cells[rand.Intn(4)]
+					cell := cells[rand.Intn(8)]
 					shipTargets[shipID] = cell.Pos
 				}
 				dir := gameMap.NaiveNavigate(ship, shipTargets[shipID])
@@ -187,10 +187,10 @@ func cellsByHalite(game *hlt.Game) []*hlt.MapCell {
 	maxCellHalite := 0
 	var cells []*hlt.MapCell
 	radius := 6
-	// We want at least 2 cells to have more than half halite
-	for ; radius <= gm.GetWidth() && maxCellHalite < maxHalite/2; radius = radius + 2 {
+	// We want at least 3 cells to have more than 25% halite
+	for ; radius <= gm.GetWidth() && maxCellHalite < maxHalite/4; radius = radius + 2 {
 		cells = gm.CellsByHalite(me.Shipyard.E.Pos, radius)
-		maxCellHalite = cells[1].Halite
+		maxCellHalite = cells[2].Halite
 	}
 	log.GetInstance().Printf("Using radius %d", radius)
 	return cells
