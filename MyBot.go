@@ -184,7 +184,7 @@ func shouldReturn(game *hlt.Game, ship *hlt.Ship) bool {
 	maxHalite, _ := gameconfig.GetInstance().GetInt(gameconfig.MaxHalite)
 
 	distanceFromHome := game.Map.CalculateDistance(ship.E.Pos, game.Me.Shipyard.E.Pos)
-	targetHalite := int(float64(maxHalite)/2 + (float64(distanceFromHome)/float64(game.Map.GetWidth()))*(float64(maxHalite)*0.4))
+	targetHalite := int(float64(maxHalite)*0.65 + (float64(distanceFromHome)/float64(game.Map.GetWidth()))*(float64(maxHalite)*0.3))
 
 	return ship.Halite > targetHalite
 }
